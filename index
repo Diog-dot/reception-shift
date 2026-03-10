@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shift V27 - Design & Tactile</title>
+    <style>
+        :root { 
+            --red: #eb4d4b; --orange: #f0932b; --yellow: #f1c40f;
+            --blue: #3498db; --green: #6ab04c; --slate: #4a5568; --dark: #130f40;
+        }
+        
+        html, body { overflow: hidden; height: 100%; margin: 0; padding: 0; position: fixed; width: 100%; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; -webkit-user-select: none; touch-action: none; }
+
+        #header-fix {
+            position: absolute; top: 0; left: 0; right: 0; height: 100px;
+            background: var(--slate); color: white; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Zone de défilement ajustée pour le nouveau footer plus bas */
+        #scroll-zone { position: absolute; top: 110px; bottom: 120px; left: 0; right: 0; overflow-y: auto; touch-action: pan-y; padding: 0 15px; }
+
+        .task-container { position: relative; overflow: hidden; border-radius: 12px; margin-bottom: 10px; background: #ddd; min-height: 70px; }
+        
+        .task { 
+            background: white; min-height: 70px; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 10px solid var(--slate); 
+            color: #2d3436; font-weight: bold; position: relative; z-index: 2;
+            transition: transform 0.1s ease-out, border-left-color 0.3s ease; box-sizing: border-box;
+        }
+
+        .prog-red { border-left-color: var(--red) !important; }
+        .prog-orange { border-left-color: var(--orange) !important; }
+        .prog-yellow { border-left-color: var(--yellow) !important; }
+        .prog-blue { border-left-color: var(--blue) !important; }
+        .prog-green { border-left-color: var(--green) !important; }
+
+        .done { border-left-color: var(--green) !important; opacity: 0.5; background: #f0fff4; }
+        .skipped { border-left-color: var(--blue) !important; opacity: 0.5; background: #f0f7ff; }
+
+        .swipe-bg { position: absolute; top: 0; bottom: 0; width: 100%; display: flex; align-items: center; font-weight: 900; color: white; z-index: 1; opacity: 0; }
+        .bg-left { background: var(--green); justify-content: flex-start; padding-left: 20px; }
+        .bg-right { background: var(--blue); justify-content: flex-end; padding-right: 20px; }
+
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center; }
+        .modal { background: white; padding: 20px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; }
+        .modal button { width: 100%; padding: 15px; margin: 8px 0; border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
+
+        .edit-input-group { background: #f8f9fa; border: 1px solid #ddd; padding: 12px; border-radius: 15px; margin-bottom: 15px; text-align: left; }
+        .time-wrapper { display: flex; align-items: center; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 5px 10px; margin-bottom: 8px; }
+        .time-wrapper input { border: none; font-size: 1rem; width: 100%; outline: none; }
+        .input-label { border: 1px solid #ccc; padding: 10px; border-radius: 8px; width: 93%; font-size: 1rem; outline: none; }
+
+        .btn-delete-x { 
+            background: #ffeded; color: var(--red); border: 2px solid var(--red) !important; 
+            width: 32px !important; height: 32px !important; padding: 0 !important; 
+            border-radius: 50% !important; font-size: 1.1rem !important; 
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Footer plus compact et plus bas */
+        #footer-fix { 
+            position: absolute; bottom: 0; left: 0; right: 0; height: 110px; 
+            background: white; padding: 5px 20px 10px 20px; border-top: 1px solid #ddd; 
+            z-index: 1000; text-align: center; box-sizing: border-box;
+        }
+
+        .bar-bg { background: #eee; height: 16px; border-radius: 10px; overflow: hidden; margin: 5px 0; display: flex; }
+        .bar-done { background: var(--green); height: 100%; transition: width 0.4s; }
+        .bar-skipped { background: var(--blue); height: 100%; transition: width 0.4s; }
+        
+        .footer-controls { display: flex; justify-content: center; gap: 30px; margin-top: 2px; }
+        .btn-circle { 
+            width: 45px; height: 45px; border-radius: 50%; border: none; 
+            font-size: 1.3rem; display: flex; align-items: center; 
+            justify-content: center; cursor: pointer; box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+        .btn-reset-icon { background: #2d3436; color: white; }
+        .btn-settings-icon { background: var(--slate); color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="header-fix">
+        <div id="header-subtitle" style="font-size: 0.8rem; opacity: 0.9;">☕ SHIFT RÉCEPTION</div>
+        <div id="next-task-display" style="font-weight: 900; font-size: 1.1rem; padding: 0 10px;">Prêt pour ce nouveau shift ?</div>
+    </div>
+
+    <div id="scroll-zone"><div id="checklist"></div></div>
+
+    <div id="action-modal" class="modal-overlay">
+        <div class="modal">
+            <h3 id="modal-title" style="margin-bottom:15px; font-size: 1rem;">Action</h3>
+            <button style="background:var(--green); color:white;" ontouchend="updateWithStatus('done')">✅ MARQUER FAIT</button>
+            <button style="background:var(--blue); color:white;" ontouchend="updateWithStatus('skipped')">⏭️ IGNORER</button>
+            <button style="background:#eee;" ontouchend="closeModals()">ANNULER</button>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal">
+            <h3>⚙️ Paramètres</h3>
+            <div class="edit-input-group">
+                <div class="time-wrapper"><span>🕒</span><input type="time" id="new-task-time"></div>
+                <input type="text" id="new-task-label" class="input-label" placeholder="Nom de la tâche...">
+                <button style="background:var(--blue); color:white; margin-top:10px; padding:10px;" ontouchend="addNewTask()">AJOUTER LA TÂCHE</button>
+            </div>
+            <div id="edit-list" style="max-height: 200px; overflow-y: auto; margin-bottom: 10px; border-top: 1px solid #eee; padding-top: 10px;"></div>
+            <button style="background:var(--dark); color:white;" ontouchend="closeModals()">FERMER</button>
+        </div>
+    </div>
+
+    <div id="footer-fix">
+        <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:0.75rem;">
+            <span style="color:var(--green)">Fait: <span id="done-pct">0%</span></span>
+            <span style="color:var(--blue)">Ignoré: <span id="skip-pct">0%</span></span>
+            <span style="color:var(--slate)">Total: <span id="total-pct">0%</span></span>
+        </div>
+        <div class="bar-bg">
+            <div id="bar-done" class="bar-done"></div>
+            <div id="bar-skipped" class="bar-skipped"></div>
+        </div>
+        
+        <div class="footer-controls">
+            <button class="btn-circle btn-reset-icon" ontouchend="resetAll()" title="Réinitialiser">🔄</button>
+            <button class="btn-circle btn-settings-icon" ontouchend="toggleEditModal()" title="Paramètres">⚙️</button>
+        </div>
+    </div>
+
+    <script>
+        const initialTasks = [
+            { id: 1, time: "14:00", label: "Compter la caisse avec équipe matin" },
+            { id: 2, time: "14:00", label: "Fermeture et ouverture caisse" },
+            { id: 3, time: "14:00", label: "Nettoyer les tasses sales (Shift Matin)" },
+            { id: 4, time: "14:00", label: "Suivi des chambres dispos" },
+            { id: 5, time: "14:00", label: "Suivi des LOST - vérification gestion" },
+            { id: 6, time: "14:00", label: "Tableau Briefing et Cahier de consignes" },
+            { id: 7, time: "14:00", label: "Tour Optique Lobby / WC / Bagagerie" },
+            { id: 8, time: "15:00", label: "Répondre aux commentaires BOOKING" },
+            { id: 9, time: "15:30", label: "Relance étages arrivées PRIO" },
+            { id: 10, time: "15:45", label: "Nouveaux points sur les dispos" },
+            { id: 11, time: "15:45", label: "Relance appartements prêts" },
+            { id: 12, time: "15:45", label: "Check-in et suivi demandes feuille de jour" },
+            { id: 13, time: "15:45", label: "Liste des encours (appels si > 50€)" },
+            { id: 14, time: "15:45", label: "Tour Optique Intérieur et Extérieur" },
+            { id: 15, time: "20:30", label: "Vider, nettoyer et ranger machine à café" },
+            { id: 16, time: "20:30", label: "Fermer Kids Corner" },
+            { id: 17, time: "20:30", label: "Facturer les viennoiseries" },
+            { id: 18, time: "21:30", label: "Compter caisse avec Night / Clôture coffre" },
+            { id: 19, time: "21:30", label: "Signer registre mouvement de caisse" },
+            { id: 20, time: "21:30", label: "Ranger réception et tasses à café" },
+            { id: 21, time: "21:30", label: "Cahier de consignes à compléter" }
+        ];
+
+        let taskList = JSON.parse(localStorage.getItem('shift_tasks_v27')) || initialTasks;
+        let state = JSON.parse(localStorage.getItem('shift_state_v27')) || {};
+        let currentId = null;
+        let x0 = null, y0 = null, moved = false;
+
+        function render() {
+            const total = taskList.length;
+            const done = Object.values(state).filter(v => v === 'done').length;
+            const skip = Object.values(state).filter(v => v === 'skipped').length;
+            const pct = Math.round(((done + skip) / total) * 100) || 0;
+
+            let progClass = "prog-red"; 
+            let headColor = 'var(--slate)';
+
+            if (pct >= 100) { progClass = "prog-green"; headColor = 'var(--green)'; }
+            else if (pct >= 90) { progClass = "prog-blue"; headColor = 'var(--blue)'; }
+            else if (pct >= 60) { progClass = "prog-yellow"; headColor = 'var(--yellow)'; }
+            else if (pct >= 30) { progClass = "prog-orange"; headColor = 'var(--orange)'; }
+            else if (pct > 0) { headColor = 'var(--red)'; }
+
+            document.getElementById('header-fix').style.backgroundColor = headColor;
+            document.getElementById('done-pct').innerText = (Math.round((done/total)*100) || 0) + "%";
+            document.getElementById('skip-pct').innerText = (Math.round((skip/total)*100) || 0) + "%";
+            document.getElementById('total-pct').innerText = pct + "%";
+
+            taskList.sort((a,b) => a.time.localeCompare(b.time));
+
+            const next = taskList.find(t => !state[t.id]);
+            document.getElementById('next-task-display').innerText = (done+skip === 0) ? "Prêt pour ce nouveau shift ?" : (next ? next.time + " - " + next.label : "Shift terminé bravo ! 🎉");
+
+            let html = "";
+            taskList.forEach(t => {
+                let icon = state[t.id] === 'done' ? '✅' : (state[t.id] === 'skipped' ? '⏭️' : '⚪');
+                let c = state[t.id] || progClass;
+                html += `
+                <div class="task-container">
+                    <div class="swipe-bg bg-left" id="bg-l-${t.id}">FAIT ✅</div>
+                    <div class="swipe-bg bg-right" id="bg-r-${t.id}">IGNORER ⏭️</div>
+                    <div class="task ${c}" data-id="${t.id}" ontouchstart="ts(event)" ontouchmove="tm(event)" ontouchend="te(event)">
+                        <div style="pointer-events:none; width:80%"><span style="font-size:0.75rem; display:block; opacity:0.6;">🕒 ${t.time}</span>${t.label}</div>
+                        <div style="pointer-events:none; font-size:1.5rem">${icon}</div>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('checklist').innerHTML = html;
+            document.getElementById('bar-done').style.width = (done/total*100) + "%";
+            document.getElementById('bar-skipped').style.width = (skip/total*100) + "%";
+        }
+
+        // Tactile
+        function ts(e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; moved = false; e.currentTarget.style.transition = 'none'; }
+        function tm(e) {
+            if (!x0) return;
+            let dx = e.touches[0].clientX - x0;
+            if (Math.abs(dx) > 10) {
+                moved = true;
+                e.currentTarget.style.transform = `translateX(${dx}px)`;
+                document.getElementById('bg-l-'+e.currentTarget.dataset.id).style.opacity = dx > 10 ? 1 : 0;
+                document.getElementById('bg-r-'+e.currentTarget.dataset.id).style.opacity = dx < -10 ? 1 : 0;
+            }
+        }
+        function te(e) {
+            if (!x0) return;
+            let dx = e.changedTouches[0].clientX - x0;
+            let id = e.currentTarget.dataset.id;
+            e.currentTarget.style.transition = 'transform 0.3s ease'; e.currentTarget.style.transform = '';
+            if (!moved) {
+                currentId = id;
+                document.getElementById('modal-title').innerText = taskList.find(t=>t.id==id).label;
+                document.getElementById('action-modal').style.display = 'flex';
+            } else {
+                if (dx > 100) state[id] = 'done';
+                else if (dx < -100) state[id] = 'skipped';
+                save(); render();
+            }
+            x0 = null;
+        }
+
+        function updateWithStatus(status) {
+            state[currentId] = (state[currentId] === status) ? null : status;
+            save(); closeModals(); render();
+        }
+
+        function save() {
+            localStorage.setItem('shift_tasks_v27', JSON.stringify(taskList));
+            localStorage.setItem('shift_state_v27', JSON.stringify(state));
+        }
+
+        function toggleEditModal() {
+            document.getElementById('edit-modal').style.display = 'flex';
+            taskList.sort((a,b) => a.time.localeCompare(b.time));
+            let h = "";
+            taskList.forEach(t => {
+                h += `<div style="display:flex; justify-content:space-between; align-items:center; background:#eee; padding:8px; margin-bottom:6px; border-radius:10px;">
+                    <span style="font-size:0.85rem; text-align:left;"><b>🕒 ${t.time}</b><br>${t.label}</span>
+                    <button class="btn-delete-x" ontouchend="delT(${t.id})">✖</button>
+                </div>`;
+            });
+            document.getElementById('edit-list').innerHTML = h;
+        }
+
+        function addNewTask() {
+            let t = document.getElementById('new-task-time').value;
+            let l = document.getElementById('new-task-label').value;
+            if(t && l) {
+                taskList.push({id:Date.now(), time:t, label:l});
+                taskList.sort((a,b) => a.time.localeCompare(b.time));
+                save(); render(); toggleEditModal();
+                document.getElementById('new-task-label').value = "";
+                document.getElementById('new-task-time').value = "";
+            }
+        }
+
+        function delT(id) {
+            taskList = taskList.filter(t=>t.id!==id);
+            delete state[id]; save(); toggleEditModal(); render();
+        }
+
+        function closeModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.style.display='none'); }
+        function resetAll() { if(confirm("Réinitialiser le shift ?")) { state = {}; save(); render(); } }
+
+        render();
+    </script>
+</body>
+</html>
